@@ -4,8 +4,6 @@ nnoremap ø :
 " Map space to : in normal mode
 "nnoremap Ø ?
 
-" Map $ to ¤ in normal mode
-:noremap ¤ $
 
 " Map <escape> to jj in insert mode
 map! jj <Esc>
@@ -26,6 +24,8 @@ lmap Å [
 lmap æ }
 lmap Æ ]
 
+" Map $ to ¤ in normal mode
+lmap ¤ $
 ":map æ }
 ":map! æ }
 "::map Æ ]
