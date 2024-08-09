@@ -14,15 +14,21 @@ map! jj <Esc>
 nnoremap <S-space> :noh <CR>
 
 " map å and Å to { and [
-:map å {
-map! å {
-:map Å [
-map! Å [
+":map å {
+"map! å {
+":map Å [
+"map! Å [
+"
+"set langmap=aa, å{, Å[ 
+set iminsert=1
+lmap å {
+lmap Å [
+lmap æ }
+lmap Æ ]
 
-" map æ and Æ to } and ]
-:map æ }
-map! æ }
-:map Æ ]
-map! Æ ]
+":map æ }
+":map! æ }
+"::map Æ ]
+":map! Æ ]
 
 map! Ø $
