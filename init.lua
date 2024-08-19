@@ -779,25 +779,29 @@ require('lazy').setup({
       }
     end,
   },
-
-  { -- You can easily change to a different colorscheme.
+{ -- You can easily change to a different colorscheme.
     -- Change the name of the colorscheme plugin below, and then
     -- change the command in the config to whatever the name of that colorscheme is.
     --
     -- If you want to see what colorschemes are already installed, you can use `:Telescope colorscheme`.
-    'bluz71/vim-moonfly-colors',
+    --'bluz71/vim-moonfly-colors',
+    --'bluz71/vim-moonfly-colors',
+  'tjdevries/colorbuddy.nvim',
     priority = 1000, -- Make sure to load this before all the other start plugins.
     init = function()
       -- Load the colorscheme here.
       -- Like many other themes, this one has different styles, and you could load
       -- any other, such as 'tokyonight-storm', 'tokyonight-moon', or 'tokyonight-day'.
       --require("moonfly").palette
-      require('moonfly').custom_colors { bg = '#000000', khaki = '#8da550', cranberry = '#c6c6c6' }
-      vim.cmd.colorscheme 'moonfly'
+      --require('moonfly').custom_colors { bg = '#000000', khaki = '#8da550', cranberry = '#c6c6c6' }
+      --require('colorbuddy')
+      --vim.cmd.colorscheme 'moonfly'
+      vim.cmd.colorscheme 'gruvbuddy'
       -- You can configure highlights by doing something like:
       vim.cmd.hi 'Comment gui=none'
     end,
   },
+
 
   -- Highlight todo, notes, etc in comments
   { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
@@ -893,7 +897,12 @@ require('lazy').setup({
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   --    For additional information, see `:help lazy.nvim-lazy.nvim-structuring-your-plugins`
-  -- { import = 'custom.plugins' },
+   { import = 'custom.plugins' },
+  -- Lua
+  --{
+   -- "tjdevries/colorbuddy.nvim"
+    "tjdevries/colorbuddy.nvim"
+  --}
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
