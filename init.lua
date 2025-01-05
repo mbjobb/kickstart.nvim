@@ -88,8 +88,7 @@ I hope you enjoy your Neovim journey,
 
 P.S. You can delete this when you're done too. It's your config now! :)
 --]]
-if vim.fn.has('win32') then
-vim.cmd 'language en_US'
+if vim.fn.has('win32') then vim.cmd 'language en_US'
 end
 
 -- Set <space> as the leader key
