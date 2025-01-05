@@ -88,7 +88,9 @@ I hope you enjoy your Neovim journey,
 
 P.S. You can delete this when you're done too. It's your config now! :)
 --]]
+if vim.fn.has('win32') then
 vim.cmd 'language en_US'
+end
 
 -- Set <space> as the leader key
 -- See `:help mapleader`
@@ -472,6 +474,8 @@ require('lazy').setup({
           local map = function(keys, func, desc)
             vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
           end
+
+          map('K', function () vim.lsp.buf.hover() end, 'Hover definition')
 
           -- Jump to the definition of the word under your cursor.
           --  This is where a variable was first declared, or where a function is defined, etc.
