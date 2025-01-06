@@ -9,7 +9,8 @@ local config = wezterm.config_builder()
 -- For example, changing the color scheme:
 config.color_scheme = 'Tokyo Night'
 
-config.font = wezterm.font 'JetBrains Mono'
+config.font = wezterm.font 'JetBrainsMono Nerd Font'
+config.harfbuzz_features = { 'calt=0', 'clig=0', 'liga=0' }
 
 config.window_padding = {
   left = 0,
