@@ -1,4 +1,29 @@
 vim.cmd 'source ~/.config/.vimrc'
+vim.opt.colorcolumn = '120'
+vim.filetype.add {
+  extension = {
+    jenkinsfile = 'groovy',
+  },
+}
+local virtual_text_enabled = true
+vim.keymap.set('n', '<leader>tv', function()
+  -- Toggle the state
+  virtual_text_enabled = not virtual_text_enabled
+  -- Apply the new configuration
+  vim.diagnostic.config {
+    virtual_text = virtual_text_enabled,
+    -- You can also toggle other handlers here if needed
+    -- signs = virtual_text_enabled,
+    -- underline = virtual_text_enabled,
+  }
+  -- Optional: display a message to confirm the state change
+end, { desc = 'Toggle diagnostics virtual text' })
+
+vim.api.nvim_create_autocmd('ColorScheme', {
+  callback = function()
+    vim.api.nvim_set_hl(0, 'ColorColumn', { link = 'CursorColumn' })
+  end,
+})
 --[[
 
 =====================================================================
@@ -170,12 +195,15 @@ vim.o.confirm = true
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
 
+-- Toggle relative line numbers
+vim.keymap.set('n', '<leader>tr', '<cmd>set relativenumber!<CR>', { desc = '[T]oggle [r]elative line numbers' })
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+vim.keymap.set('n', '<leader>j', vim.diagnostic.open_float, { desc = 'Open floating diagnostics window' })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -536,6 +564,8 @@ require('lazy').setup({
             vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
           end
 
+          map('K', vim.lsp.buf.hover, 'Show info', 'n')
+
           -- Rename the variable under your cursor.
           --  Most Language Servers support renaming across files, etc.
           map('grn', vim.lsp.buf.rename, '[R]e[n]ame')
@@ -624,6 +654,11 @@ require('lazy').setup({
               vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
             end, '[T]oggle Inlay [H]ints')
           end
+
+          if client.name == 'basedpyright' then
+            local client_id = client
+            vim.lsp.on_type_formatting.enable(true)
+          end
         end,
       })
 
@@ -632,22 +667,26 @@ require('lazy').setup({
       vim.diagnostic.config {
         severity_sort = true,
         float = { border = 'rounded', source = 'if_many' },
-        underline = { severity = vim.diagnostic.severity.ERROR },
-        signs = vim.g.have_nerd_font and {
-          text = {
-            [vim.diagnostic.severity.ERROR] = '󰅚 ',
-            [vim.diagnostic.severity.WARN] = '󰀪 ',
-            [vim.diagnostic.severity.INFO] = '󰋽 ',
-            [vim.diagnostic.severity.HINT] = '󰌶 ',
-          },
-        } or {},
+        underline = { severity = { vim.diagnostic.severity.ERROR, vim.diagnostic.severity.WARN, vim.diagnostic.severity.INFO, vim.diagnostic.severity.HINT } },
+        signs = vim.g.have_nerd_font
+            and {
+              text = {
+                [vim.diagnostic.severity.ERROR] = '󰅚 ',
+                [vim.diagnostic.severity.WARN] = '󰀪 ',
+                [vim.diagnostic.severity.INFO] = '󰋽 ',
+                [vim.diagnostic.severity.HINT] = '󰌶 ',
+              },
+              severity = { vim.diagnostic.severity.ERROR, vim.diagnostic.severity.INFO, vim.diagnostic.severity.HINT },
+              -- numhl = { [vim.diagnostic.severity.WARN] = 'WarningMsg' },
+            }
+          or {},
         virtual_text = {
           source = 'if_many',
           spacing = 2,
           format = function(diagnostic)
             local diagnostic_message = {
               [vim.diagnostic.severity.ERROR] = diagnostic.message,
-              [vim.diagnostic.severity.WARN] = diagnostic.message,
+              -- [vim.diagnostic.severity.WARN] = diagnostic.message,
               [vim.diagnostic.severity.INFO] = diagnostic.message,
               [vim.diagnostic.severity.HINT] = diagnostic.message,
             }
@@ -672,9 +711,34 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        -- clangd = {},
+        clangd = {},
+        groovyls = {
+          settings = {
+            groovy = {
+              files = {
+                exclude = {
+                  '**/verification/outcomes/**',
+                  '**/build*/**',
+                  '**/outcomes/**',
+                },
+              },
+              classpath = {
+                '/usr/share/groovy/lib/*.jar',
+                '~/.gradle/caches/modules-2/files-2.1/',
+              },
+            },
+          },
+          -- cmd = { 'java', '-jar', '/home/mab9/.local/share/nvim/mason/packages/groovy-language-server/build/libs/groovy-language-server-all.jar' },
+          -- filetypes = { '*.jenkinsfile' },
+          -- classpath = { '/usr/share/groovy/lib' },
+        },
         -- gopls = {},
         -- pyright = {},
+        basedpyright = {
+          cmd = { 'run', 'basedpyright-langserver', '--stdio' },
+          settings = { python = {}, basedpyright = { analysis = { autoFormatStrings = true } } },
+          -- capabilities = { textDocument = { onTypeFormating = { dynamicRegistration = true } } },
+        },
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
         --
@@ -726,6 +790,7 @@ require('lazy').setup({
         handlers = {
           function(server_name)
             local server = servers[server_name] or {}
+
             -- This handles overriding only values explicitly passed
             -- by the server configuration above. Useful when disabling
             -- certain features of an LSP (for example, turning off formatting for ts_ls)
@@ -900,7 +965,7 @@ require('lazy').setup({
   },
 
   -- Highlight todo, notes, etc in comments
-  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = false } },
+  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = true, highlight = { multiline = true } } },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
@@ -957,6 +1022,9 @@ require('lazy').setup({
         additional_vim_regex_highlighting = { 'ruby' },
       },
       indent = { enable = true, disable = { 'ruby' } },
+      -- vim.filetype.add {
+      --   extension = { jenkinsfile = 'groovy' },
+      -- },
     },
     -- There are additional nvim-treesitter modules that you can use to interact
     -- with nvim-treesitter. You should go explore a few and see what interests you:
@@ -980,7 +1048,7 @@ require('lazy').setup({
   -- require 'kickstart.plugins.lint',
   require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
