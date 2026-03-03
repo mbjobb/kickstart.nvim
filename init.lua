@@ -1,4 +1,6 @@
 vim.cmd 'source ~/.config/.vimrc'
+-- vim.o.winborder = 'rounded'
+-- vim.lsp.util.open_floating_preview.Opts
 vim.opt.colorcolumn = '120'
 vim.filetype.add {
   extension = {
@@ -436,12 +438,12 @@ require('lazy').setup({
         -- You can put your default mappings / updates / etc. in here
         --  All the info you're looking for is in `:help telescope.setup()`
         --
-        -- defaults = {
-        --   mappings = {
-        --     i = { ['<c-enter>'] = 'to_fuzzy_refine' },
-        --   },
-        -- },
-        -- pickers = {}
+        defaults = {
+          mappings = {
+            i = { ['<c-enter>'] = 'to_fuzzy_refine' },
+          },
+        },
+        -- pickers = { },
         extensions = {
           ['ui-select'] = {
             require('telescope.themes').get_dropdown(),
@@ -452,16 +454,26 @@ require('lazy').setup({
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
+      pcall(require('telescope').load_extension, 'todo-comments')
 
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
+      vim.keymap.set('n', '<leader>so', builtin.lsp_document_symbols, { desc = '[S]earch Symb[O]ls' })
       vim.keymap.set('n', '<leader>sh', builtin.help_tags, { desc = '[S]earch [H]elp' })
       vim.keymap.set('n', '<leader>sk', builtin.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', builtin.find_files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', builtin.builtin, { desc = '[S]earch [S]elect Telescope' })
       vim.keymap.set('n', '<leader>sw', builtin.grep_string, { desc = '[S]earch current [W]ord' })
       vim.keymap.set('n', '<leader>sg', builtin.live_grep, { desc = '[S]earch by [G]rep' })
-      vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
+      vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch current buffer [D]iagnostics' }, { bufnr = 0 })
+      vim.keymap.set('n', '<leader>sD', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
+      -- vim.keymap.set('n', '<leader>st', '<cmd>TodoTelescope <cr>', { desc = '[S]earch [T]ODOs in buffer' })
+      -- vim.keymap.set('n', '<leader>td', ':TodoTelescope cwd=%:p<CR>', { desc = 'TODOs in current buffer' })
+      -- vim.keymap.set('n', '<leader>st', function()
+      --   local bufpath = vim.fn.expand '%:p:h'
+      --   require('telescope').extensions['todo-comments'].todo { opts = { cwd = bufpath } }
+      -- end, { desc = '[S]earch [T]ODOs in current buffer' })
+
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
@@ -551,6 +563,33 @@ require('lazy').setup({
       --    That is to say, every time a new file is opened that is associated with
       --    an lsp (for example, opening `main.rs` is associated with `rust_analyzer`) this
       --    function will be executed to configure the current buffer
+      -- groovyls does not receive settings automatically in Nvim 0.11+, so push them on attach.
+      -- The server only reads classpath via workspace/didChangeConfiguration.
+      vim.api.nvim_create_autocmd('LspAttach', {
+        group = vim.api.nvim_create_augroup('kickstart-groovyls-settings', { clear = true }),
+        callback = function(args)
+          local client = vim.lsp.get_client_by_id(args.data.client_id)
+          if client and client.name == 'groovyls' then
+            client.notify('workspace/didChangeConfiguration', {
+              settings = {
+                groovy = {
+                  files = {
+                    exclude = {
+                      '**/verification/outcomes/**',
+                      '**/build*/**',
+                      '**/outcomes/**',
+                    },
+                  },
+                  -- groovyls bundles Groovy 4.0.26; use matching version to avoid class
+                  -- conflicts between the compiler's GroovyClassLoader and the JVM classpath
+                  classpath = vim.fn.glob('/home/mab9/.sdkman/candidates/groovy/4.0.26/lib/*.jar', false, true),
+                },
+              },
+            })
+          end
+        end,
+      })
+
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
         callback = function(event)
@@ -564,8 +603,17 @@ require('lazy').setup({
             vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
           end
 
-          map('K', vim.lsp.buf.hover, 'Show info', 'n')
+          -- map('K', vim.lsp.buf.hover, 'Show info', 'n')
+          -- vim.keymap.set('n', 'K', vim.lsp.util.open_floating.preview, { opts = { border = 'rounded' } })
 
+          local orig_util_open_floating_preview = vim.lsp.util.open_floating_preview
+
+          function vim.lsp.util.open_floating_preview(contents, syntax, opts, ...)
+            opts = opts or {}
+            opts.border = opts.border or 'rounded'
+
+            return orig_util_open_floating_preview(contents, syntax, opts, ...)
+          end
           -- Rename the variable under your cursor.
           --  Most Language Servers support renaming across files, etc.
           map('grn', vim.lsp.buf.rename, '[R]e[n]ame')
@@ -712,32 +760,27 @@ require('lazy').setup({
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
         clangd = {},
-        groovyls = {
+        groovyls = {},
+        -- gopls = {},
+        -- pyright = {},
+        ruff = {
+          -- cmd = { 'ruff', 'server', '--config "format.quote-style = \'single\'"' },
+          -- init_opttions = {
+
           settings = {
-            groovy = {
-              files = {
-                exclude = {
-                  '**/verification/outcomes/**',
-                  '**/build*/**',
-                  '**/outcomes/**',
-                },
-              },
-              classpath = {
-                '/usr/share/groovy/lib/*.jar',
-                '~/.gradle/caches/modules-2/files-2.1/',
+            configurationPreference = 'editorFirst',
+            configuration = {
+              format = {
+                -- ['quote-style'] = 'single',
               },
             },
           },
-          -- cmd = { 'java', '-jar', '/home/mab9/.local/share/nvim/mason/packages/groovy-language-server/build/libs/groovy-language-server-all.jar' },
-          -- filetypes = { '*.jenkinsfile' },
-          -- classpath = { '/usr/share/groovy/lib' },
+          -- },
         },
-        -- gopls = {},
-        -- pyright = {},
         basedpyright = {
           cmd = { 'run', 'basedpyright-langserver', '--stdio' },
           settings = { python = {}, basedpyright = { analysis = { autoFormatStrings = true } } },
-          -- capabilities = { textDocument = { onTypeFormating = { dynamicRegistration = true } } },
+          -- capabilities = { positionEncodings = { 'utf-8' } },
         },
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
@@ -839,6 +882,11 @@ require('lazy').setup({
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
+      },
+      formatters = {
+        ruff = {
+          -- prepend_args = { '--config "quote-style= "single"' },
+        },
       },
     },
   },
@@ -965,7 +1013,25 @@ require('lazy').setup({
   },
 
   -- Highlight todo, notes, etc in comments
-  { 'folke/todo-comments.nvim', event = 'VimEnter', dependencies = { 'nvim-lua/plenary.nvim' }, opts = { signs = true, highlight = { multiline = true } } },
+  {
+    'folke/todo-comments.nvim',
+    event = 'VimEnter',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    opts = { signs = true, highlight = { multiline = true } },
+    -- -- option 1: if using telescope instead of fzf
+    config = function(_, opts)
+      require('todo-comments').setup(opts)
+      vim.keymap.set('n', '<leader>st', function()
+        require('telescope.builtin').grep_string {
+          search = 'oo|TODO|HACK|WARN|PERF|NOTE|FIX',
+          file_ignore_patterns = {},
+          only_sort_text = true,
+          path_display = { 'smart' },
+          search_dirs = { vim.fn.expand '%:p' },
+        }
+      end, { desc = 'Todo (current file)' })
+    end,
+  },
 
   { -- Collection of various small independent plugins/modules
     'echasnovski/mini.nvim',
@@ -1011,7 +1077,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'rst', 'python' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
