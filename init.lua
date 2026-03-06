@@ -764,23 +764,17 @@ require('lazy').setup({
         -- gopls = {},
         -- pyright = {},
         ruff = {
-          -- cmd = { 'ruff', 'server', '--config "format.quote-style = \'single\'"' },
-          -- init_opttions = {
-
-          settings = {
-            configurationPreference = 'editorFirst',
-            configuration = {
+          init_options = {
+            settings = {
               format = {
-                -- ['quote-style'] = 'single',
+                args = { '--quote-style=single' },
               },
             },
           },
-          -- },
         },
         basedpyright = {
           cmd = { 'run', 'basedpyright-langserver', '--stdio' },
           settings = { python = {}, basedpyright = { analysis = { autoFormatStrings = true } } },
-          -- capabilities = { positionEncodings = { 'utf-8' } },
         },
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
@@ -834,10 +828,10 @@ require('lazy').setup({
           function(server_name)
             local server = servers[server_name] or {}
 
-            -- This handles overriding only values explicitly passed
             -- by the server configuration above. Useful when disabling
             -- certain features of an LSP (for example, turning off formatting for ts_ls)
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+            server.offset_encoding = server.offset_encoding or 'utf-8'
             require('lspconfig')[server_name].setup(server)
           end,
         },
@@ -877,6 +871,7 @@ require('lazy').setup({
       end,
       formatters_by_ft = {
         lua = { 'stylua' },
+        python = { 'ruff_format' },
         -- Conform can also run multiple formatters sequentially
         -- python = { "isort", "black" },
         --
@@ -884,8 +879,8 @@ require('lazy').setup({
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
       },
       formatters = {
-        ruff = {
-          -- prepend_args = { '--config "quote-style= "single"' },
+        ruff_format = {
+          prepend_args = { '--config', 'format.quote-style="single"' },
         },
       },
     },
