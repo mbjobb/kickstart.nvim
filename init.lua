@@ -1121,6 +1121,28 @@ require('lazy').setup({
   -- Or use telescope!
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
+  {
+    'MeanderingProgrammer/render-markdown.nvim',
+    enabled = true,
+    config = function()
+      require('render-markdown').setup {
+        -- Optional default settings
+        -- enabled = true,
+        -- render_modes = { 'n', 'c', 't' },
+        -- debounce = 100,
+        sign = { priority = nil },
+        heading = { icons = { '' } },
+      }
+    end,
+    -- Ensure it works with the kickstart.nvim default colorscheme
+    -- and other dependencies like nvim-web-devicons if you want icons.
+    dependencies = {
+      'nvim-treesitter/nvim-treesitter',
+      'nvim-tree/nvim-web-devicons',
+    },
+    -- Automatically enable it for markdown files
+    ft = { 'markdown' },
+  },
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
