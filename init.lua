@@ -230,6 +230,10 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+vim.keymap.set('t', '<C-h>', '<C-\\><C-n><C-w><C-h>', { desc = 'Move focus to the left window' })
+vim.keymap.set('t', '<C-l>', '<C-\\><C-n><C-w><C-l>', { desc = 'Move focus to the right window' })
+vim.keymap.set('t', '<C-j>', '<C-\\><C-n><C-w><C-j>', { desc = 'Move focus to the lower window' })
+vim.keymap.set('t', '<C-k>', '<C-\\><C-n><C-w><C-k>', { desc = 'Move focus to the upper window' })
 -- NOTE: Some terminals have colliding keymaps or are not able to send distinct keycodes
 -- vim.keymap.set("n", "<C-S-h>", "<C-w>H", { desc = "Move window to the left" })
 -- vim.keymap.set("n", "<C-S-l>", "<C-w>L", { desc = "Move window to the right" })
@@ -773,8 +777,7 @@ require('lazy').setup({
           },
         },
         basedpyright = {
-          cmd = { 'run', 'basedpyright-langserver', '--stdio' },
-          settings = { python = {}, basedpyright = { analysis = { autoFormatStrings = true } } },
+          settings = { python = {}, basedpyright = { analysis = { autoFormatStrings = true, reportUnusedCallResult = 'none' } } },
         },
         -- rust_analyzer = {},
         -- ... etc. See `:help lspconfig-all` for a list of all the pre-configured LSPs
@@ -824,18 +827,15 @@ require('lazy').setup({
       require('mason-lspconfig').setup {
         ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
         automatic_installation = false,
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            server.offset_encoding = server.offset_encoding or 'utf-8'
-            require('lspconfig')[server_name].setup(server)
-          end,
-        },
       }
+
+      for server_name, server in pairs(servers) do
+        vim.lsp.config(server_name, vim.tbl_deep_extend('force', server, {
+          capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {}),
+          offset_encoding = server.offset_encoding or 'utf-8',
+        }))
+      end
+
     end,
   },
 
